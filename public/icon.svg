@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#7c3aed" />
+    </linearGradient>
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#e0e7ff" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Rounded App Icon Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Inner Subtle Ring -->
+  <rect x="24" y="24" width="464" height="464" rx="88" fill="none" stroke="#ffffff" stroke-opacity="0.15" stroke-width="4" />
+
+  <!-- Wallet & Coins Icon Group -->
+  <g filter="url(#shadow)" transform="translate(106, 106)">
+    <!-- Wallet Back -->
+    <rect x="30" y="70" width="240" height="170" rx="24" fill="url(#iconGrad)" opacity="0.9" />
+    
+    <!-- Wallet Front Card -->
+    <rect x="10" y="100" width="280" height="160" rx="24" fill="url(#iconGrad)" />
+    <path d="M 10 150 L 290 150" stroke="#4f46e5" stroke-width="6" opacity="0.2" />
+
+    <!-- Wallet Clasp -->
+    <rect x="230" y="150" width="60" height="60" rx="16" fill="#fbbf24" />
+    <circle cx="250" cy="180" r="10" fill="#ffffff" />
+
+    <!-- Sparkle Stars -->
+    <path d="M 220 30 L 226 50 L 246 56 L 226 62 L 220 82 L 214 62 L 194 56 L 214 50 Z" fill="#fbbf24" />
+    <path d="M 60 40 L 63 52 L 75 55 L 63 58 L 60 70 L 57 58 L 45 55 L 57 52 Z" fill="#60a5fa" />
+  </g>
+</svg>
