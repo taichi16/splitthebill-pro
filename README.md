@@ -3,7 +3,7 @@
 專為手機輸入設計的親子與多人團體分帳記帳 Web 軟體，支援大人/小孩設定、夫妻檔歸併、按代付者直連歸還方案，並提供 **GPS 定位店家**、**多相片帳單儲存**與 **Google Sheets 雲端備份**等專業功能。
 
 ## 📲 網址
-*(請替換為您專業版的 GitHub Pages 部署網址)*
+https://taichi16.github.io/splitthebill-pro/
 
 ---
 

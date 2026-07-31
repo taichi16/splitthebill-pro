@@ -54,15 +54,17 @@ export async function backupToGoogleSheets(gasUrl, tripName, members, expenses) 
       from: t.fromName,
       to: t.toName,
       amount: t.amount
+    })),
+    optimizedTransfers: (settlement.optimizedTransfers || []).map(t => ({
+      from: t.fromName,
+      to: t.toName,
+      amount: t.amount
     }))
   };
 
-  // We use text/plain for the Content-Type header to avoid CORS preflight options check,
-  // as Google Apps Script redirecting can sometimes trigger CORS errors on the preflight check.
-  // The GAS doGet/doPost receives the request body as e.postData.contents and can parse it.
   const response = await fetch(gasUrl, {
     method: 'POST',
-    mode: 'no-cors', // Dispatches the request in background securely, ignores redirect CORS issues.
+    mode: 'no-cors',
     headers: {
       'Content-Type': 'text/plain;charset=utf-8'
     },
@@ -121,7 +123,7 @@ function doPost(e) {
     writeTripNameAndMeta(ss, data.tripName, data.backupTime);
     writeMembersSheet(ss, data.members);
     writeExpensesSheet(ss, data.expenses);
-    writeSettlementSheet(ss, data.households, data.transfers);
+    writeSettlementSheet(ss, data.households, data.transfers, data.optimizedTransfers);
     
     return ContentService.createTextOutput("Backup Success")
                          .setMimeType(ContentService.MimeType.TEXT);
@@ -189,11 +191,11 @@ function writeExpensesSheet(ss, expenses) {
   sheet.autoResizeColumns(1, headers.length);
 }
 
-function writeSettlementSheet(ss, households, transfers) {
+function writeSettlementSheet(ss, households, transfers, optimizedTransfers) {
   var sheet = ss.getSheetByName("3.結算與轉帳") || ss.insertSheet("3.結算與轉帳");
   sheet.clear();
   
-  // 家庭收支統計
+  // 1. 家庭收支統計
   sheet.getRange(1, 1).setValue("家庭/戶頭收支統計").setFontWeight("bold").setFontSize(11);
   var hhHeaders = ["家庭名稱/成員", "代付總額", "消費總額", "淨收支 (正值應收 / 負值應付)"];
   sheet.getRange(2, 1, 1, hhHeaders.length).setValues([hhHeaders]).setFontWeight("bold").setBackground("#cbd5e1");
@@ -213,9 +215,9 @@ function writeSettlementSheet(ss, households, transfers) {
     sheet.getRange(3, 2, numHh, 3).setNumberFormat("$#,##0");
   }
   
-  // 轉帳清償方案
+  // 2. 方案 A：按代付者直連轉帳清償方案
   var transferTitleRow = startRow + numHh + 2;
-  sheet.getRange(transferTitleRow, 1).setValue("按代付者直連轉帳清償方案").setFontWeight("bold").setFontSize(11);
+  sheet.getRange(transferTitleRow, 1).setValue("方案 A：按代付者直連轉帳方案 (誰代付還給誰)").setFontWeight("bold").setFontSize(11);
   
   var transHeaders = ["匯出人 (誰付款)", "匯入人 (匯給誰)", "轉帳金額"];
   var transHeaderRow = transferTitleRow + 1;
@@ -233,6 +235,29 @@ function writeSettlementSheet(ss, households, transfers) {
       ]]);
     }
     sheet.getRange(transStartRow, 3, transfers.length, 1).setNumberFormat("$#,##0");
+  }
+  
+  var numTrans = transfers.length > 0 ? transfers.length : 1;
+  
+  // 3. 方案 B：最佳化簡化轉帳清償方案
+  var optTitleRow = transStartRow + numTrans + 2;
+  sheet.getRange(optTitleRow, 1).setValue("方案 B：最佳化簡化轉帳方案 (轉帳筆數最少)").setFontWeight("bold").setFontSize(11);
+  
+  var optHeaderRow = optTitleRow + 1;
+  sheet.getRange(optHeaderRow, 1, 1, transHeaders.length).setValues([transHeaders]).setFontWeight("bold").setBackground("#94a3b8");
+  
+  var optStartRow = optHeaderRow + 1;
+  if (optimizedTransfers.length === 0) {
+    sheet.getRange(optStartRow, 1).setValue("所有人帳務均已完美平衡，無需轉帳！").setFontStyle("italic");
+  } else {
+    for (var k = 0; k < optimizedTransfers.length; k++) {
+      sheet.getRange(optStartRow + k, 1, 1, transHeaders.length).setValues([[
+        optimizedTransfers[k].from,
+        optimizedTransfers[k].to,
+        optimizedTransfers[k].amount
+      ]]);
+    }
+    sheet.getRange(optStartRow, 3, optimizedTransfers.length, 1).setNumberFormat("$#,##0");
   }
   
   sheet.autoResizeColumns(1, 4);

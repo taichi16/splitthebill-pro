@@ -249,11 +249,64 @@ export function calculateSettlement(members, expenses) {
     }
   });
 
+  // 5. Optimized Transfers (Debt Simplification)
+  const optimizedTransfers = [];
+  const creditors = [];
+  const debtors = [];
+
+  Object.values(householdConsolidated).forEach(hh => {
+    const net = hh.totalNet;
+    if (net > 1) {
+      creditors.push({
+        id: hh.id,
+        name: getHouseholdDisplayName(hh),
+        amount: net
+      });
+    } else if (net < -1) {
+      debtors.push({
+        id: hh.id,
+        name: getHouseholdDisplayName(hh),
+        amount: Math.abs(net)
+      });
+    }
+  });
+
+  // Sort descending to perform greedy matching
+  creditors.sort((a, b) => b.amount - a.amount);
+  debtors.sort((a, b) => b.amount - a.amount);
+
+  let cIdx = 0;
+  let dIdx = 0;
+
+  while (cIdx < creditors.length && dIdx < debtors.length) {
+    const creditor = creditors[cIdx];
+    const debtor = debtors[dIdx];
+
+    const amountToTransfer = Math.min(creditor.amount, debtor.amount);
+    
+    if (amountToTransfer > 1) {
+      optimizedTransfers.push({
+        fromId: debtor.id,
+        fromName: debtor.name,
+        toId: creditor.id,
+        toName: creditor.name,
+        amount: Math.round(amountToTransfer)
+      });
+    }
+
+    creditor.amount -= amountToTransfer;
+    debtor.amount -= amountToTransfer;
+
+    if (creditor.amount <= 1) cIdx++;
+    if (debtor.amount <= 1) dIdx++;
+  }
+
   return {
     totalAmount: Math.round(totalAmount),
     individualBalances,
     householdConsolidated,
-    transfers
+    transfers,
+    optimizedTransfers
   };
 }
 
@@ -272,9 +325,10 @@ export function getHouseholdDisplayName(hh) {
   return title;
 }
 
-export function generateLineShareText(members, expenses, tripName = '多人記帳拆帳') {
+export function generateLineShareText(members, expenses, tripName = '多人記帳拆帳', mode = 'direct') {
   const settlement = calculateSettlement(members, expenses);
-  const { totalAmount, householdConsolidated, transfers } = settlement;
+  const { totalAmount, householdConsolidated, transfers, optimizedTransfers } = settlement;
+  const targetTransfers = mode === 'optimized' ? optimizedTransfers : transfers;
 
   let text = `✈️ 【${tripName || '多人記帳拆帳'} - 結算報告】 📊\n`;
   text += `----------------------------\n`;
@@ -296,17 +350,18 @@ export function generateLineShareText(members, expenses, tripName = '多人記�
     }
   });
 
-  text += `\n💳 【按代付者直連轉帳清償方案】\n`;
-  if (transfers.length === 0) {
+  const modeTitle = mode === 'optimized' ? '最佳化簡化轉帳清償方案' : '按代付者直連轉帳清償方案';
+  text += `\n💳 【${modeTitle}】\n`;
+  if (targetTransfers.length === 0) {
     text += `🎉 所有人帳務均已完美平衡，無需轉帳！\n`;
   } else {
-    transfers.forEach((t, i) => {
+    targetTransfers.forEach((t, i) => {
       text += `${i + 1}. 👉 ${t.fromName} 需轉給 🏦 ${t.toName} 💰 $${t.amount.toLocaleString()} 元\n`;
     });
   }
 
   text += `\n----------------------------\n`;
-  text += `📱 本報告由「多人記帳拆帳」自動計算產生`;
+  text += `📱 本報告由「多人記帳拆帳 專業版」自動計算產生`;
 
   return text;
 }

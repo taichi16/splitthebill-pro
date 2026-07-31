@@ -12,7 +12,6 @@ export const CATEGORIES = [
 ];
 
 export default function ExpenseModal({ show, onClose, onSave, editingExpense, members }) {
-  if (!show) return null;
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('dining');
@@ -282,6 +281,8 @@ export default function ExpenseModal({ show, onClose, onSave, editingExpense, me
 
     onSave(expData);
   };
+
+  if (!show) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>

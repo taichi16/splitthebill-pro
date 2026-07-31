@@ -5,14 +5,17 @@ import { calculateSettlement, generateLineShareText, getHouseholdDisplayName } f
 
 export default function SettlementView({ members, expenses, tripName, onShowToast }) {
   const [showIndividualDetails, setShowIndividualDetails] = useState(false);
+  const [settlementMode, setSettlementMode] = useState('direct'); // 'direct' | 'optimized'
 
   const settlement = calculateSettlement(members, expenses);
-  const { totalAmount, individualBalances, householdConsolidated, transfers } = settlement;
+  const { totalAmount, individualBalances, householdConsolidated, transfers, optimizedTransfers } = settlement;
+
+  const activeTransfers = settlementMode === 'optimized' ? optimizedTransfers : transfers;
 
   const handleCopyLineText = () => {
-    const text = generateLineShareText(members, expenses, tripName);
+    const text = generateLineShareText(members, expenses, tripName, settlementMode);
     navigator.clipboard.writeText(text).then(() => {
-      onShowToast('📋 已將分帳報告複製至剪貼簿！可直接貼至 LINE / 通訊群組');
+      onShowToast(`📋 已將【${settlementMode === 'optimized' ? '最佳化' : '直連'}】分帳報告複製至剪貼簿！`);
       try {
         confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
       } catch (e) {}
@@ -33,7 +36,7 @@ export default function SettlementView({ members, expenses, tripName, onShowToas
           ${totalAmount.toLocaleString()} <span style={{ fontSize: '0.9rem' }}>TWD</span>
         </div>
         <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>
-          採「誰幫我刷卡就還給誰」直連邏輯，並將夫妻與小孩自動歸併
+          採「家庭/戶頭自動歸併」，提供直連與最佳化雙模式切換
         </div>
 
         <button
@@ -45,18 +48,41 @@ export default function SettlementView({ members, expenses, tripName, onShowToas
         </button>
       </div>
 
-      {/* Direct Payer Reimbursement Transfers Section */}
+      {/* Transfers Section */}
       <div className="card">
-        <div className="section-header">
-          <h3 className="section-title" style={{ color: 'var(--primary)' }}>
-            <CreditCard size={20} color="var(--primary)" /> 按代付者直連轉帳清償方案 ({transfers.length} 筆)
-          </h3>
-        </div>
-        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          💡 原則：僅對您參與且由他人代付的消費進行直連歸還，無跨餐混合相抵。
+        {/* Toggle Mode Switcher */}
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
+          <button
+            type="button"
+            className={`btn ${settlementMode === 'direct' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ flex: 1, padding: '8px 4px', fontSize: '0.82rem', minHeight: 'auto' }}
+            onClick={() => setSettlementMode('direct')}
+          >
+            💳 直連清償 (原模式)
+          </button>
+          <button
+            type="button"
+            className={`btn ${settlementMode === 'optimized' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ flex: 1, padding: '8px 4px', fontSize: '0.82rem', minHeight: 'auto' }}
+            onClick={() => setSettlementMode('optimized')}
+          >
+            ⚡ 計算最佳化 (簡化)
+          </button>
         </div>
 
-        {transfers.length === 0 ? (
+        <div className="section-header">
+          <h3 className="section-title" style={{ color: 'var(--primary)', fontSize: '0.95rem' }}>
+            <CreditCard size={18} color="var(--primary)" /> {settlementMode === 'optimized' ? '最佳化簡化轉帳清償方案' : '按代付者直連轉帳清償方案'} ({activeTransfers.length} 筆)
+          </h3>
+        </div>
+        
+        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+          {settlementMode === 'optimized' 
+            ? '💡 原則：自動對沖所有人淨應收與淨應付金額，簡化間接轉帳關係，轉帳次數最少。'
+            : '💡 原則：誰幫您代付就還給誰，只清算您參與的消費項目，帳目關係最直觀。'}
+        </div>
+
+        {activeTransfers.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '20px 10px', color: 'var(--success)' }}>
             <CheckCircle2 size={40} style={{ margin: '0 auto 8px' }} />
             <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>所有人帳務平衡！</div>
@@ -64,7 +90,7 @@ export default function SettlementView({ members, expenses, tripName, onShowToas
           </div>
         ) : (
           <div>
-            {transfers.map((t, idx) => (
+            {activeTransfers.map((t, idx) => (
               <div key={idx} className="transfer-card">
                 <div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>轉帳步驟 #{idx + 1}</div>
